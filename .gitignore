@@ -1,0 +1,9 @@
+input/*
+output/*
+.mplconfig/
+**/__pycache__/
+*.pyc
+.DS_Store
+
+!input/.gitkeep
+!output/.gitkeep
