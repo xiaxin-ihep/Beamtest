@@ -16,4 +16,4 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 python "${SCRIPT_DIR}/../scripts/convert_source_binary_to_root.py" \
   --input-dir "${INPUT_DIR}" \
   --run-name "${RUN_NAME}" \
-  --output-root "${SCRIPT_DIR}/../output/source_raw/${RUN_NAME}/${RUN_NAME}_source_raw.root"
+  --output-root "${SCRIPT_DIR}/../output/source_raw/${RUN_NAME}/${RUN_NAME}_siwecaldecoded.root"

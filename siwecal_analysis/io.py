@@ -85,12 +85,13 @@ def load_layer_from_decoupechannel(
     windows, chips, memories = adc_sample.shape
     adc_high = np.empty((windows, chips, memories, 64), dtype=adc_sample.dtype)
     hitbit_high = np.empty((windows, chips, memories, 64), dtype=np.load(layer_dir / "hitbit_high_array0.npy").dtype)
-    adc_trig = np.empty((windows, chips, memories, 64), dtype=np.load(layer_dir / "adc_trig_array0.npy").dtype) if include_trig else None
+    trig_sample = layer_dir / "adc_trig_array0.npy"
+    adc_trig = np.empty((windows, chips, memories, 64), dtype=np.load(trig_sample).dtype) if include_trig and trig_sample.exists() else None
 
     for channel in range(64):
         adc_high[:, :, :, channel] = np.load(layer_dir / f"adc_high_array{channel}.npy")
         hitbit_high[:, :, :, channel] = np.load(layer_dir / f"hitbit_high_array{channel}.npy")
-        if include_trig and adc_trig is not None:
+        if adc_trig is not None:
             adc_trig[:, :, :, channel] = np.load(layer_dir / f"adc_trig_array{channel}.npy")
 
     return LayerData(adc_high=adc_high, hitbit_high=hitbit_high, adc_trig=adc_trig)

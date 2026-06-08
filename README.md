@@ -1,142 +1,85 @@
 # ECAL Test Analysis
 
-This directory contains a cleaned analysis framework for two workflows:
-
-- `beam test`
-- `source test`
-
-The code is organized so that both workflows share common utilities while keeping their entry points and usage separate.
+Reusable analysis framework for SiW-ECAL beam tests and source tests.
 
 ## Purpose
 
-The framework provides:
+This repository provides one shared analysis structure for:
 
-- reusable file I/O helpers
-- mapping utilities
-- plotting helpers
-- beam-test analysis scripts
-- source-test analysis scripts
-- conversion helpers for ROOT, `decoupechannel`, and source raw files
+- conversion from detector data files to ROOT and `decoupechannel` NumPy arrays
+- hit, pedestal, signal, and hold-scan studies
+- source-test occupancy and source-response plots
+- common mapping, plotting, and I/O helpers
 
-## Directory Structure
+## Repository Layout
 
 ```text
 ECAL_Test_Analysis/
-├── README.md
 ├── beam_test/
+├── input/
 ├── output/
 ├── run_source_pipeline.sh
-├── source_test/
 ├── scripts/
-│   ├── analyze_hit_map.py
-│   ├── analyze_hits_histogram.py
-│   ├── analyze_hold_scan.py
-│   ├── analyze_pedestal.py
-│   ├── analyze_signal_map.py
-│   ├── analyze_source_run.py
-│   ├── convert_binary_to_root.py
-│   ├── convert_root_to_npy.py
-│   ├── convert_source_binary_to_root.py
-│   └── run_source_pipeline.py
-└── siwecal_analysis/
-    ├── analysis.py
-    ├── config.py
-    ├── conversion.py
-    ├── io.py
-    ├── mapping.py
-    ├── plotting.py
-    └── source_analysis.py
+├── siwecal_analysis/
+└── source_test/
 ```
+
+Key directories:
+
+- `scripts/`: command-line entry points
+- `siwecal_analysis/`: shared Python modules
+- `beam_test/`: beam-test usage notes
+- `source_test/`: source-test usage notes
+- `input/`: run directories
+- `output/`: analysis products
 
 ## Environment
 
-Use the `r6.28` conda environment:
+Use the ROOT and `uproot` environment:
 
 ```bash
 conda activate r6.28
 ```
 
-Required packages:
+Quick check:
 
 ```bash
-python -c "import numpy, scipy, matplotlib, uproot, ROOT"
+python -c "import numpy, matplotlib, uproot, ROOT"
+```
+
+## Data Flow
+
+### Beam Test
+
+```text
+binary/ROOT input
+  -> converted ROOT
+  -> decoupechannel/layerX/*.npy
+  -> pedestal / hit map / signal / SNR / hold scan
+```
+
+### Source Test
+
+```text
+source .bin/.bin_XXXX or .dat
+  -> siwecaldecoded ROOT
+  -> decoupechannel/layerX/*.npy
+  -> source hit / fraction / signal plots
+  -> pedestal or other beam-style studies if needed
 ```
 
 ## Beam Test Workflow
 
-Beam-test analysis is intended for:
-
-- pedestal maps
-- noise checks
-- hit maps
-- signal / amplitude maps
-- S/N maps
-- hold-value scans
-
 Main scripts:
 
+- `scripts/convert_binary_to_root.py`
+- `scripts/convert_root_to_npy.py`
 - `scripts/analyze_pedestal.py`
 - `scripts/analyze_hit_map.py`
 - `scripts/analyze_signal_map.py`
 - `scripts/analyze_hold_scan.py`
 
-Typical input:
-
-- converted ROOT files
-- `decoupechannel/layerX/*.npy`
-
-Typical output directories:
-
-- `output/pedestal/`
-- `output/hitmap/`
-- `output/signal/`
-- `output/hold_scan/`
-
-See:
-
-- [beam_test/README.md](/Users/xiaxin/Desktop/work/TB_Desy/TB2025-03/SiWECAL-TB-analysis/script_victor_cp/local_analysis/ECAL_Test_Analysis/beam_test/README.md:1)
-
-## Source Test Workflow
-
-Source-test analysis provides tools for:
-
-- occupancy visualization
-- source-driven activity maps
-- saturation summaries
-- frame-level inspection of source raw files
-
-Main scripts and wrappers:
-
-- `scripts/analyze_hits_histogram.py`
-- `source_test/run_hits_histogram_fallback.sh`
-- `scripts/convert_source_binary_to_root.py`
-- `source_test/run_source_raw_converter.sh`
-- `run_source_pipeline.sh`
-
-Typical input:
-
-```text
-input/<run_name>/
-├── Run_Settings.txt
-├── hitsHistogram.txt
-├── logfile.txt
-├── <run_name>.bin
-└── <run_name>.bin_0001
-```
-
-Typical output directories:
-
-- `output/hitsHistogram/`
-- `output/source_raw/`
-- `output/pipeline/`
-
-See:
-
-- [source_test/README.md](/Users/xiaxin/Desktop/work/TB_Desy/TB2025-03/SiWECAL-TB-analysis/script_victor_cp/local_analysis/ECAL_Test_Analysis/source_test/README.md:1)
-
-## Beam Test Usage
-
-### Pedestal
+Typical usage:
 
 ```bash
 python scripts/analyze_pedestal.py \
@@ -145,8 +88,6 @@ python scripts/analyze_pedestal.py \
   --memory 0
 ```
 
-### Hit Map
-
 ```bash
 python scripts/analyze_hit_map.py \
   --run 587 \
@@ -154,17 +95,13 @@ python scripts/analyze_hit_map.py \
   --memory -1
 ```
 
-### Signal / SNR
-
 ```bash
 python scripts/analyze_signal_map.py \
   --run 587 \
   --layer 1 \
   --memory 0 \
-  --pedestal-file output/pedestal/Run_ILC_20250304_masking_it3_2_eudaq_run_090587_layer1_pedestal.npz
+  --pedestal-file output/pedestal/<pedestal_file>.npz
 ```
-
-### Hold Scan
 
 ```bash
 python scripts/analyze_hold_scan.py \
@@ -177,69 +114,147 @@ python scripts/analyze_hold_scan.py \
   --use-hitbit 1
 ```
 
-## Source Test Usage
+Beam-test inputs:
 
-### hitsHistogram Analysis
+- converted ROOT files with tree `siwecaldecoded`
+- or `decoupechannel/layerX/*.npy`
+
+Beam-test outputs:
+
+- `output/pedestal/`
+- `output/hitmap/`
+- `output/signal/`
+- `output/hold_scan/`
+
+## Source Test Workflow
+
+Main scripts:
+
+- `scripts/convert_source_binary_to_root.py`
+- `scripts/convert_root_to_npy.py`
+- `scripts/analyze_source_run.py`
+- `scripts/analyze_pedestal.py`
+- `scripts/analyze_hits_histogram.py`
+- `scripts/analyze_source_campaign.py`
+- `scripts/run_source_pipeline.py`
+- `run_source_pipeline.sh`
+
+Supported source input files:
+
+- `*.bin`
+- `*.bin_XXXX`
+- `*.dat`
+- optional `Run_Settings.txt`
+- optional `hitsHistogram.txt`
+
+### 1. Convert source data to ROOT
 
 ```bash
-./source_test/run_hits_histogram_fallback.sh \
-  input/source_asu_2026_004_th250_run_000008 \
-  0
+python scripts/convert_source_binary_to_root.py \
+  --input-dir input/source_asu_2026_002_th250_run_000009 \
+  --output-root output/source_raw/source_asu_2026_002_th250_run_000009/source_asu_2026_002_th250_run_000009_siwecaldecoded.root
 ```
 
-Equivalent direct command:
+This writes a beam-test-like ROOT tree named `siwecaldecoded`.
+
+### 2. Convert ROOT to `decoupechannel`
 
 ```bash
-python scripts/analyze_hits_histogram.py \
-  --histogram-file input/source_asu_2026_004_th250_run_000008/hitsHistogram.txt \
-  --run-name source_asu_2026_004_th250_run_000008 \
+python scripts/convert_root_to_npy.py \
+  --run-dir output/source_raw/source_asu_2026_002_th250_run_000009 \
+  --layers 0
+```
+
+### 3. Produce source plots
+
+```bash
+python scripts/analyze_source_run.py \
+  --run-dir output/source_raw/source_asu_2026_002_th250_run_000009 \
   --layer 0 \
-  --output-dir output/hitsHistogram/source_asu_2026_004_th250_run_000008
+  --settings-file input/source_asu_2026_002_th250_run_000009/Run_Settings.txt \
+  --output-dir output/source/source_asu_2026_002_th250_run_000009
 ```
 
-### Source Raw ROOT Conversion
+### 4. Run pedestal analysis on source data
+
+After step 2, the standard pedestal code can be reused:
 
 ```bash
-./source_test/run_source_raw_converter.sh \
-  input/source_asu_2026_004_th250_run_000008
+python scripts/analyze_pedestal.py \
+  --run source_asu_2026_002_th250_run_000009 \
+  --layer 0 \
+  --memory -1 \
+  --converted-base output/source_raw \
+  --output-dir output/pedestal_source
 ```
 
-### Full Source Wrapper
+### 5. Run the full source pipeline
 
 ```bash
 ./run_source_pipeline.sh \
-  input/source_asu_2026_004_th250_run_000008 \
+  input/source_asu_2026_002_th250_run_000009 \
   0
 ```
 
-## Source Plot Settings
+This performs:
 
-Source-test plots are configured with:
+- source file conversion to `siwecaldecoded` ROOT
+- ROOT to `decoupechannel`
+- source response plots
+
+## Input Structure
+
+Typical source run directory:
+
+```text
+input/<run_name>/
+├── Run_Settings.txt
+├── hitsHistogram.txt
+├── <run_name>.bin
+├── <run_name>.bin_0001
+└── ...
+```
+
+or:
+
+```text
+input/<run_name>/
+├── Run_Settings.txt
+├── hitsHistogram.txt
+└── <run_name>.dat
+```
+
+## Output Structure
+
+Common output products:
+
+- converted ROOT with tree `siwecaldecoded`
+- `decoupechannel/layerX/*.npy`
+- pedestal `.npz`
+- source hit / fraction / signal PDFs
+- JSON summaries
+
+Typical source pipeline output:
+
+```text
+output/pipeline/<run_name>/
+├── analysis/
+├── converted/
+│   ├── <run_name>_siwecaldecoded.root
+│   └── decoupechannel/
+└── pedestal/   # optional, if run separately
+```
+
+## Plot Conventions
+
+Source-test plotting defaults:
 
 - PDF output
 - title format `Source_test_2026_00x_thxxx`
-- x-axis label font size `20`
-- y-axis label font size `20`
+- x-axis title size `20`
+- y-axis title size `20`
 
-## Output Summary
+## References
 
-### Beam Test
-
-- mapped analysis arrays
-- channel-level arrays
-- pedestal files
-- hit / signal / SNR maps
-- hold scan curves
-
-### Source Test
-
-- `hitsHistogram` map PDF
-- `hitsHistogram` summary JSON
-- source raw ROOT file
-- source raw summary JSON
-
-## Notes
-
-- For beam-test `decoupechannel` data, a single channel file has shape `(n_windows, 16, 15)`.
-- `--memory -1` means “merge all memory cells”.
-- The `source_raw` ROOT converter is available as a source-test intermediate tool.
+- [beam_test/README.md](/Users/xiaxin/Desktop/work/TB_Desy/TB2025-03/SiWECAL-TB-analysis/script_victor_cp/local_analysis/ECAL_Test_Analysis/beam_test/README.md:1)
+- [source_test/README.md](/Users/xiaxin/Desktop/work/TB_Desy/TB2025-03/SiWECAL-TB-analysis/script_victor_cp/local_analysis/ECAL_Test_Analysis/source_test/README.md:1)

@@ -18,18 +18,17 @@ from siwecal_analysis.conversion import convert_source_binary_to_root
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Source-test specific binary -> ROOT converter based on frame extraction.")
+    parser = argparse.ArgumentParser(description="Convert source-test decoded frames (.bin/.bin_XXXX or .dat) into a beam-test-like siwecaldecoded ROOT tree.")
     parser.add_argument("--input-dir", type=Path, required=True)
     parser.add_argument("--run-name", help="Defaults to input directory name.")
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--store-full-bytes", action="store_true", help="Also store frame bytes in the ROOT tree. This is slower and larger.")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     run_name = args.run_name or args.input_dir.name
-    summary = convert_source_binary_to_root(args.input_dir, args.output_root, run_name, store_full_bytes=args.store_full_bytes)
+    summary = convert_source_binary_to_root(args.input_dir, args.output_root, run_name)
     print(json.dumps(summary, indent=2))
 
 

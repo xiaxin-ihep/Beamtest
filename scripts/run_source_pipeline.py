@@ -15,20 +15,18 @@ if str(SORT_DIR) not in sys.path:
     sys.path.insert(0, str(SORT_DIR))
 
 from siwecal_analysis.config import DEFAULT_ECAL_MAPPING, DEFAULT_OUTPUT_DIR
-from siwecal_analysis.conversion import convert_root_to_decoupechannel, run_root_conversion, stage_raw_segments
+from siwecal_analysis.conversion import convert_root_to_decoupechannel, convert_source_binary_to_root
 from siwecal_analysis.io import load_layer
 from siwecal_analysis.source_analysis import analyze_source_layer, parse_run_settings
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Full source-run pipeline: binary -> ROOT -> decoupechannel npy -> source plots.")
+    parser = argparse.ArgumentParser(description="Full source-run pipeline: decoded-frame source files -> siwecaldecoded ROOT -> decoupechannel npy -> source plots.")
     parser.add_argument("--input-dir", type=Path, required=True, help="Directory containing the original source run files.")
     parser.add_argument("--run-name", help="Run name. Defaults to the input directory name.")
     parser.add_argument("--layer", type=int, default=0, help="Single layer index to analyze for this ECAL-alone test.")
     parser.add_argument("--work-dir", type=Path, default=DEFAULT_OUTPUT_DIR / "pipeline", help="Pipeline working directory.")
     parser.add_argument("--mapping-file", type=Path, default=DEFAULT_ECAL_MAPPING)
-    parser.add_argument("--macro-path", type=Path, default=Path("/Users/xiaxin/Desktop/work/TB_Desy/ConvertDirectorySL_Raw.cc"))
-    parser.add_argument("--copy-raw", action="store_true")
     return parser.parse_args()
 
 
@@ -37,11 +35,11 @@ def main() -> None:
     run_name = args.run_name or args.input_dir.name
     run_work_dir = args.work_dir / run_name
     root_dir = run_work_dir / "converted"
-    stage_dir = run_work_dir / "raw_stage"
     analysis_dir = run_work_dir / "analysis"
+    root_dir.mkdir(parents=True, exist_ok=True)
+    output_root = root_dir / f"{run_name}_siwecaldecoded.root"
 
-    staged_files = stage_raw_segments(args.input_dir, stage_dir, run_name, copy_files=args.copy_raw)
-    run_root_conversion(stage_dir, run_name, root_dir, args.macro_path)
+    conversion_summary = convert_source_binary_to_root(args.input_dir, output_root, run_name)
     convert_root_to_decoupechannel(root_dir, layers=[args.layer])
 
     layer_data = load_layer(root_dir, args.layer, include_trig=True)
@@ -62,8 +60,9 @@ def main() -> None:
             {
                 "run_name": run_name,
                 "input_dir": str(args.input_dir),
-                "staged_files": [str(path) for path in staged_files],
                 "root_dir": str(root_dir),
+                "root_file": str(output_root),
+                "conversion": conversion_summary,
                 "analysis_dir": str(analysis_dir),
                 "summary": summary,
             },
@@ -74,4 +73,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

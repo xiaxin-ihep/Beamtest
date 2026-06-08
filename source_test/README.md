@@ -1,21 +1,29 @@
 # Source Test
 
-This directory documents the workflow for `ecal alone` source-test data.
+Source-test workflow for ECAL-alone data.
 
 ## Purpose
 
-The source-test workflow is intended for:
+This workflow converts source-test decoded frames into the same `siwecaldecoded` ROOT structure used by the beam-test chain, so the data can be reused for:
 
-- occupancy checks
-- hot-region visualization
-- channel activity summaries
-- source-run quick validation
+- source hit and fraction maps
+- signal maps
+- pedestal studies
+- later custom studies based on ROOT or `decoupechannel`
 
-## Available Tools
+## Supported Inputs
 
-### hitsHistogram Analysis
+A source run directory may contain:
 
-Use the DAQ `hitsHistogram.txt` input:
+- `Run_Settings.txt`
+- `hitsHistogram.txt`
+- `<run_name>.bin`
+- `<run_name>.bin_0001`, `<run_name>.bin_0002`, ...
+- or `<run_name>.dat`
+
+## Main Commands
+
+### Quick `hitsHistogram` fallback
 
 ```bash
 ./run_hits_histogram_fallback.sh \
@@ -23,26 +31,51 @@ Use the DAQ `hitsHistogram.txt` input:
   0
 ```
 
-This wrapper runs:
-
-```bash
-python ../scripts/analyze_hits_histogram.py ...
-```
-
-### Source Raw ROOT Conversion
-
-Use this command to write a ROOT-level intermediate file for source raw frames:
+### Convert source files to ROOT
 
 ```bash
 ./run_source_raw_converter.sh \
   ../input/source_asu_2026_004_th250_run_000008
 ```
 
-This creates a `source_raw` ROOT tree.
+Equivalent direct command:
 
-### Full Source Pipeline
+```bash
+python ../scripts/convert_source_binary_to_root.py \
+  --input-dir ../input/source_asu_2026_004_th250_run_000008 \
+  --output-root ../output/source_raw/source_asu_2026_004_th250_run_000008/source_asu_2026_004_th250_run_000008_siwecaldecoded.root
+```
 
-Use the full wrapper with:
+### Convert ROOT to `decoupechannel`
+
+```bash
+python ../scripts/convert_root_to_npy.py \
+  --run-dir ../output/source_raw/source_asu_2026_004_th250_run_000008 \
+  --layers 0
+```
+
+### Analyze one source run
+
+```bash
+python ../scripts/analyze_source_run.py \
+  --run-dir ../output/source_raw/source_asu_2026_004_th250_run_000008 \
+  --layer 0 \
+  --settings-file ../input/source_asu_2026_004_th250_run_000008/Run_Settings.txt \
+  --output-dir ../output/source/source_asu_2026_004_th250_run_000008
+```
+
+### Reuse the pedestal workflow
+
+```bash
+python ../scripts/analyze_pedestal.py \
+  --run source_asu_2026_004_th250_run_000008 \
+  --layer 0 \
+  --memory -1 \
+  --converted-base ../output/source_raw \
+  --output-dir ../output/pedestal_source
+```
+
+### Full source pipeline
 
 ```bash
 ../run_source_pipeline.sh \
@@ -50,61 +83,34 @@ Use the full wrapper with:
   0
 ```
 
-This wrapper calls:
+## Output Structure
 
-- binary staging
-- binary to ROOT
-- ROOT to `decoupechannel`
-- source plotting
-
-## Inputs
-
-Typical source-test input directory:
-
-```text
-input/<run_name>/
-├── Run_Settings.txt
-├── hitsHistogram.txt
-├── logfile.txt
-├── <run_name>.bin
-└── <run_name>.bin_0001
-```
-
-## Outputs
-
-### hitsHistogram Analysis
-
-The fallback analysis writes to:
-
-```text
-../output/hitsHistogram/<run_name>/
-```
-
-Files:
-
-- `<run_name>_layer0_hitsHistogram_map.pdf`
-- `<run_name>_layer0_hitsHistogram.npz`
-- `<run_name>_layer0_hitsHistogram_summary.json`
-
-### Source Raw ROOT Conversion
-
-The source raw converter writes to:
+### ROOT conversion
 
 ```text
 ../output/source_raw/<run_name>/
+├── <run_name>_siwecaldecoded.root
+└── <run_name>_siwecaldecoded.summary.json
 ```
 
-Files:
-
-- `<run_name>_source_raw.root`
-- `<run_name>_source_raw.summary.json`
-
-### Full Pipeline
-
-The full source pipeline writes to:
+### Full pipeline
 
 ```text
 ../output/pipeline/<run_name>/
+├── analysis/
+├── converted/
+│   ├── <run_name>_siwecaldecoded.root
+│   └── decoupechannel/
+└── ...
+```
+
+### Fallback `hitsHistogram` analysis
+
+```text
+../output/hitsHistogram/<run_name>/
+├── <run_name>_layer0_hitsHistogram_map.pdf
+├── <run_name>_layer0_hitsHistogram.npz
+└── <run_name>_layer0_hitsHistogram_summary.json
 ```
 
 ## Plot Settings
@@ -113,5 +119,5 @@ Source-test plots use:
 
 - PDF output
 - title format `Source_test_2026_00x_thxxx`
-- x-axis label font size `20`
-- y-axis label font size `20`
+- x-axis title size `20`
+- y-axis title size `20`
